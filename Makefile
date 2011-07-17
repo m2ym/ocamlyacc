@@ -14,10 +14,9 @@
 
 # Makefile for the parser generator.
 
-include ../config/Makefile
-
-CC=$(BYTECC)
-CFLAGS=-O -DNDEBUG $(BYTECCCOMPOPTS)
+CC=gcc
+CFLAGS=-O -DNDEBUG
+LDFLAGS=
 
 OBJS= closure.o error.o lalr.o lr0.o main.o mkpar.o output.o reader.o \
   skeleton.o symtab.o verbose.o warshall.o
@@ -25,13 +24,10 @@ OBJS= closure.o error.o lalr.o lr0.o main.o mkpar.o output.o reader.o \
 all: ocamlyacc$(EXE)
 
 ocamlyacc$(EXE): $(OBJS)
-	$(CC) $(CFLAGS) $(CCLINKFLAGS) -o ocamlyacc $(OBJS)
-
-version.h : ../VERSION
-	echo "#define OCAML_VERSION \"`sed -e 1q ../VERSION`\"" >version.h
+	$(CC) $(CFLAGS) $(LDFLAGS) -o ocamlyacc $(OBJS)
 
 clean:
-	rm -f *.o ocamlyacc$(EXE) *~ version.h
+	rm -f *.o ocamlyacc$(EXE) *~
 
 depend:
 

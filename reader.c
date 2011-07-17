@@ -38,6 +38,8 @@ bucket *goal;
 int prec;
 int gensym;
 char last_was_action;
+char *last_action_name;
+int last_action_postpos;
 
 int maxitems;
 bucket **pitem;
@@ -1195,7 +1197,7 @@ void insert_empty_rule(void)
     register bucket *bp, **bpp;
 
     assert(cache);
-    sprintf(cache, "$$%d", ++gensym);
+    sprintf(cache, "%s_%d_", last_action_name, ++gensym);
     bp = make_bucket(cache);
     last_symbol->next = bp;
     last_symbol = bp;
@@ -1216,6 +1218,13 @@ void insert_empty_rule(void)
     rprec[nrules-1] = 0;
     rassoc[nrules] = rassoc[nrules-1];
     rassoc[nrules-1] = TOKEN;
+
+    if (last_action_postpos) {
+        int cur = ftell(action_file);
+        fseek(action_file, last_action_postpos, SEEK_SET);
+        fprintf(action_file, "_%d_", gensym);
+        fseek(action_file, cur, SEEK_SET);
+    }
 }
 
 
@@ -1241,7 +1250,8 @@ void add_symbol(void)
         return;
     }
 
-    if (last_was_action) syntax_error (lineno, line, ecptr);
+    if (last_was_action)
+        insert_empty_rule();
     last_was_action = 0;
 
     if (++nitems > maxitems)
@@ -1263,8 +1273,11 @@ void copy_action(void)
     char *a_line = dup_line();
     char *a_cptr = a_line + (cptr - line);
 
-    if (last_was_action) syntax_error (lineno, line, cptr);
+    if (last_was_action)
+        insert_empty_rule();
     last_was_action = 1;
+    last_action_name = "";
+    last_action_postpos = 0;
 
     /*
       fprintf(f, "(* Rule %d, file %s, line %d *)\n",
@@ -1334,8 +1347,12 @@ loop:
         fprintf(f, " : %s))\n", tagres);
       else if (sflag)
         fprintf(f, "))\n");
-      else
-        fprintf(f, " : '%s))\n", plhs[nrules]->name);
+      else {
+          fprintf(f, " : '%s", plhs[nrules]->name);
+          last_action_name = plhs[nrules]->name;
+          last_action_postpos = ftell(f);
+          fprintf(f, "                      ))\n");
+      }
       if (sflag)
         fprintf(f, "\n");
       return;
